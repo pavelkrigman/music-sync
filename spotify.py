@@ -172,7 +172,5 @@ if __name__ == '__main__':
     #                                    redirect_uri='http://localhost:8888/callback')
     # sp = spotipy.Spotify(auth=token)
 
-    # user2 = sp.user('21rvbfcgfb4sy7lsubpleobmq')
-    # spotify_connect("menahem", scope_)
     print(sp.current_user())
 
