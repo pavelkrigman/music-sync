@@ -75,6 +75,7 @@ def search_track(event):
     lb = event.widget
     global track_artist
     global track_list_id
+    global chosen_track_id
     if lb.curselection():
         track_artist = []
         track_list_id = []
@@ -95,6 +96,7 @@ def search_track(event):
                 track_artist.append(artist_list)
             title_text.config(text=a_list[0])
             artist_text.config(text="\n".join(track_artist[0]))
+            chosen_track_id = track_list_id[0]
             searchLV.set(tuple(a_list))  # TODO try to search track title and artist
 
 
