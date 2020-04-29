@@ -20,6 +20,7 @@ track_artist = []
 playlist_list_id = []
 chosen_track_id = ""
 chosen_playlist_id = ""
+track_title_list = []
 
 
 class Scrollbox(tkinter.Listbox):
@@ -52,19 +53,20 @@ def full_file(root, extension="mp3"):
     :param extension: type of files needed (default - mp3)
     :return: returns a list of all the files (from a specific type) in the selected directory
     """
+    global track_title_list
     file_errors = []
-    file_list = []
+    track_title_list = []
     for path, directories, files in os.walk(root):  # TODO if there sub directories, search inside as well
         for file in fnmatch.filter(files, "*" + extension):
             try:
                 id3r = id3reader.Reader(root + "/" + file)
                 if id3r.get_value('title') is None or "":
-                    file_list.append(file.strip("mp3"))
+                    track_title_list.append(file.strip("mp3"))
                 else:
-                    file_list.append(id3r.get_value('title'))
+                    track_title_list.append(id3r.get_value('title'))
             except OSError:
                 file_errors.append(file)
-    return file_list
+    return track_title_list
 
 
 def search_track(event):
@@ -168,6 +170,32 @@ def add_track_to_playlist():
     status_window(status_text)
 
 
+def add_all_to_playlist():
+    """
+    adds all of the tracks from the chosen folder to some playlist.
+    will automatically add the first result from the title search in spotify.
+    **** USE AT YOUR OWN RISK ****
+    """
+    not_found_list = []
+    if chosen_playlist_id:
+        for track in track_title_list:
+            result = spotify.track_search(track, 1)
+            if not result:
+                not_found_list.append(track)
+                # searchLV.set(("No results found", "please edit the title", "or", "try a different track"))
+            else:
+                # (track_title, artists list, track_id (as a list), album_title)
+                _, _, track_id, _ = result[0]
+                spotify.add_track(spotify_user_id, chosen_playlist_id, track_id)
+        if not not_found_list:
+            status_window("All tracks were added")
+        else:
+            print(not_found_list)
+            status_window("No results found for \n 1 or more tracks")
+    else:
+        status_window("Please Choose A Playlist")
+
+
 def connect():
     """makes the connection to the spotify API and gets the connected user_id"""
     global spotify_user_id
@@ -178,17 +206,27 @@ def connect():
 
 def status_window(msg):
     status_win = tkinter.Toplevel(bd=6, relief='groove')
-    ttk.Label(status_win, text=msg).grid(sticky='we', padx=(40, 0), pady=(20, 0))
     status_win.geometry("200x150")
     status_win.lift(main_window)
     status_win.transient(main_window)
     status_win.overrideredirect(True)
 
-    ok_button = ttk.Button(status_win, text="Close")
-    ok_button.grid(padx=(40, 0), pady=(20, 0))
-    ok_button.config(command=status_win.destroy)
+    msg_status = ttk.Label(status_win, text=msg)
+    msg_status.grid(sticky='we')
 
+    ok_button = ttk.Button(status_win, text="Close")
+    ok_button.grid(sticky='we')
+    ok_button.config(command=status_win.destroy)
+    # center window, text and button
     center_window(status_win)
+
+    text_size = [atr.split('x') for atr in msg_status.winfo_geometry().split('+')]
+    pad_text = (200 - int(text_size[0][0])) // 2
+    msg_status.grid(padx=(pad_text - 3, 0), pady=(20, 0))
+
+    text_size = [atr.split('x') for atr in ok_button.winfo_geometry().split('+')]
+    pad_text = (200 - int(text_size[0][0])) // 2
+    ok_button.grid(sticky='we', padx=(pad_text - 3, 0), pady=(20, 0))
 
 
 def center_window(window):
@@ -290,10 +328,14 @@ playlist_new_buttons = ttk.Button(main_window, text="Create New")
 playlist_new_buttons.grid(row=7, column=2, sticky='wn', padx=(30, 0))
 playlist_new_buttons.config(command=create_playlist)
 
-# ============== right panel ===================
+# ============== add buttons ===================
 add_track_button = ttk.Button(main_window, text='Add Track')
-add_track_button.grid(row=6, column=3, padx=(15, 0))
+add_track_button.grid(row=6, column=3)
 add_track_button.config(command=add_track_to_playlist)
+
+add_all_button = ttk.Button(main_window, text='Add All')
+add_all_button.grid(row=5, column=0, sticky='e', padx=(0, 15))
+add_all_button.config(command=add_all_to_playlist)
 
 # ============== exit ===================
 exit_button = ttk.Button(main_window, text="EXIT")
